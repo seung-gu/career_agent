@@ -79,7 +79,7 @@ class Me:
 
     def __init__(self):
         self.openai = OpenAI()
-        self.name = "Ed Donner"
+        self.name = "Seung-Gu"
         reader = PdfReader("me/linkedin.pdf")
         self.linkedin = ""
         for page in reader.pages:
@@ -132,4 +132,10 @@ If the user is engaging in discussion, try to steer them towards getting in touc
 
 if __name__ == "__main__":
     me = Me()
-    gr.ChatInterface(me.chat, type="messages").launch()
+    gr.ChatInterface(me.chat, type="messages", chatbot=gr.Chatbot(
+            type="messages",
+            value=[{
+                "role": "assistant",
+                "content": "Hi, my name is Seung-Gu! I'd be happy to share more about my career path - feel free to ask me any questions!"
+            }])
+    ).launch()
