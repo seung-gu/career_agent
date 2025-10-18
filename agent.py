@@ -4,7 +4,7 @@ from pypdf import PdfReader
 import os
 import requests
 import gradio as gr
-import asyncio
+
 
 load_dotenv(override=True)
 
@@ -58,8 +58,24 @@ def record_unknown_question(question: str):
 # Build instructions (same intent as agent.py)
 instructions = f"You are acting as {name}. You are answering questions on {name}'s website, particularly questions related to {name}'s career, background, skills and experience. Your responsibility is to represent {name} for interactions on the website as faithfully as possible. You are given a summary of {name}'s background and LinkedIn profile which you can use to answer questions. Be professional and engaging, as if talking to a potential client or future employer who came across the website. If you don't know the answer to any question, use your record_unknown_question tool to record the question that you couldn't answer, even if it's about something trivial or unrelated to career. If the user is engaging in discussion, try to steer them towards getting in touch via email; ask for their email and record it using your record_user_details tool.\n\n## Summary:\n{summary}\n\n## LinkedIn Profile:\n{linkedin}\n\nWith this context, please chat with the user, always staying in character as {name}."
 
-# Temporary agent without tools; tools will be added in the next step
+
+# to use a different model not from openai, this is prerequisite
+"""
+from openai import AsyncOpenAI
+from agents import OpenAIChatCompletionsModel
+gemini_client = AsyncOpenAI(base_url="https://generativelanguage.googleapis.com/v1beta/openai/", api_key=os.getenv('GOOGLE_API_KEY'))
+gemini_model = OpenAIChatCompletionsModel(model="gemini-2.0-flash", openai_client=gemini_client)
 agent1 = Agent(
+    name=name,
+    instructions=instructions,
+    model=gemini_model,
+    tools=[record_user_details, record_unknown_question]
+)
+"""
+
+
+# Temporary agent without tools; tools will be added in the next 
+career_agent = Agent(
     name=name,
     instructions=instructions,
     model="gpt-4o-mini",
@@ -74,7 +90,10 @@ async def chat(message, history):
     for m in history:
         if m.get("role") in ("user", "assistant"):
             context.append({"role": m["role"], "content": m["content"]})
-    result = await Runner.run(agent1, input=message, context=context)
+
+    with trace("Career Agent"):
+        result = await Runner.run(career_agent, input=message, context=context)
+
     return result.final_output
 
 
