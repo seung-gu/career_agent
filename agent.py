@@ -3,6 +3,7 @@
 from dotenv import load_dotenv
 from agents import Agent, Runner, trace
 import gradio as gr
+import os
 
 # Load environment variables
 load_dotenv(override=True)
@@ -81,11 +82,22 @@ Repository names are in "owner/repo" format (e.g., "{example_repo}").
 
 
 # Load personal data
+print("Loading personal data...")
 personal_data = load_personal_data()
 
 # Load GitHub repository information
-load_github_repos()
-repo_paths = get_repo_paths()
+print("Loading GitHub repositories...")
+# Only load repos if GITHUB_TOKEN is set (to avoid errors in Space)
+repo_paths = {}
+if os.getenv("GITHUB_TOKEN"):
+    try:
+        load_github_repos()
+        repo_paths = get_repo_paths()
+        print(f"Loaded {len(repo_paths)} repositories")
+    except Exception as e:
+        print(f"Warning: Could not load GitHub repos: {e}")
+else:
+    print("GITHUB_TOKEN not set, skipping repository loading")
 
 # Build agent instructions
 instructions = _build_agent_instructions(personal_data, repo_paths)
@@ -137,13 +149,17 @@ async def chat(message: str, history: list[dict]) -> str:
     return result.final_output
 
 
-if __name__ == "__main__":
-    # Gradio UI
-    gr.ChatInterface(
-        fn=chat,
+# Create Gradio interface
+print("Initializing Gradio interface...")
+demo = gr.ChatInterface(
+    fn=chat,
+    type="messages",
+    chatbot=gr.Chatbot(
         type="messages",
-        chatbot=gr.Chatbot(
-            type="messages",
-            value=[{"role": "assistant", "content": f"Hi, I'm {personal_data.name}'s agent. Ask me anything!"}],
-        ),
-    ).launch()
+        value=[{"role": "assistant", "content": f"Hi, I'm {personal_data.name}'s agent. Ask me anything!"}],
+    ),
+    title=f"{personal_data.name}'s Career Agent",
+)
+
+if __name__ == "__main__":
+    demo.launch()
